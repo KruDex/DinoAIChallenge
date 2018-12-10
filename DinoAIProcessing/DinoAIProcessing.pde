@@ -328,8 +328,7 @@ void draw() {
     dinoField.setInt("score", dinos.get(i).score);
     dinoData.setJSONObject(i, dinoField);
   }
-
-
+  gameData.setJSONArray("dinos", dinoData);
 
   gameData.setInt("instances", dinoInstances);
   interfaceServer.write(gameData.toString());
@@ -340,33 +339,40 @@ void draw() {
     if (clientMsg != null) {
       // a bit problematic since any field that is not send will cause an exception, thus the client needs to send all
       JSONObject msg = parseJSONObject(clientMsg);
-      int dinoNo = msg.getInt("dino_instance");
-      println("Addressing dino:", dinoNo);
+      JSONArray dinoMsgs = msg.getJSONArray("dinos");
+
+      try {
+        for (int i=0; i<dinoMsgs.size(); i++) {
+          println(dinoMsgs.get(i));
+          int addressedDino = msg.getInt("dino_instance");
+          addressedDino = constrain(addressedDino, 0, dinoInstances);
+
+          if (msg.getString("action").equals("duck")) {
+            dinos.get(addressedDino).isDucking = true;
+          } else if (msg.getString("action").equals("bigjump")) {
+            dinos.get(addressedDino).jump();
+            dinos.get(addressedDino).setLowGrav();
+            println("Jump");
+          } else if (msg.getString("action").equals("smalljump")) {
+            dinos.get(addressedDino).jump();
+            dinos.get(addressedDino).setNormalGrav();
+          }
+        }
+      }
+      catch (Exception e) {
+        println("Error reading JSON array for the dinos");
+      }
+
       if (msg.getString("command").equals("restart")) {
         restart();
       }
+
       if (msg.getInt("num_instances") != dinoInstances) {
         dinoInstances = msg.getInt("num_instances");
         constrain(dinoInstances, 1, maxDinoInstances);
         println("Changed dino instance number to:", dinoInstances);
         dinoInstances = msg.getInt("num_instances");
         restart();
-      }
-
-      int addressedDino = msg.getInt("dino_instance");
-      addressedDino = constrain(addressedDino, 0, dinoInstances);
-
-      if (msg.getString("action").equals("duck")) {
-        dinos.get(addressedDino).isDucking = true;
-      }
-      if (msg.getString("action").equals("bigjump")) {
-        dinos.get(addressedDino).jump();
-        dinos.get(addressedDino).setLowGrav();
-        println("Jump");
-      }
-      if (msg.getString("action").equals("smalljump")) {
-        dinos.get(addressedDino).jump();
-        dinos.get(addressedDino).setNormalGrav();
       }
     }
   }
