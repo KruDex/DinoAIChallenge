@@ -1,6 +1,11 @@
-import processing.net.*; //<>//
+import processing.net.*; //<>// //<>// //<>//
+import processing.sound.*;
+// in case the sim takes many dinos
+int dinoInstances = 1;
+int maxDinoInstances = 20;
 
-Dino dino;
+
+ArrayList<Dino> dinos = new ArrayList<Dino>();
 ArrayList<Cactus> cactuses = new ArrayList<Cactus>();
 ArrayList<Dirt> soil = new ArrayList<Dirt>();
 ArrayList<Cloud> clouds = new ArrayList<Cloud>();
@@ -23,18 +28,26 @@ boolean isGameOver;
 boolean hideScore;
 boolean showDebugInfo;
 
-
-
+//graphics
 PImage cactusSprite;
 PImage dinoSprites;
 PImage cloudSprite;
 PImage pteroSprites;
+
+//sounds
+SoundFile jumpSound;
+SoundFile levelUpSound;
+SoundFile hurtSound;
 
 PFont pixelFont;
 
 //for the network
 Server interfaceServer;
 JSONObject gameData;
+JSONArray dinoData;
+
+
+String Version = "0.9.1";
 
 void init()
 {
@@ -55,7 +68,13 @@ void init()
     int y = int (random(horizonY + 10, height - 10));
     soil.add(new Dirt(x, y));
   }
-  dino = new Dino();
+
+  //populating the dino array
+  for (int i = 0; i<dinoInstances; i++) {
+    dinos.add(new Dino());
+  }
+
+  dinoData = new JSONArray();
   frameRate(30);
   loop();
 }
@@ -72,6 +91,11 @@ void setup () {
   dinoSprites = loadImage("Dino.png");
   cloudSprite = loadImage("cloud.png");
   pteroSprites = loadImage("pteros.png");
+
+  //load the sounds
+  jumpSound = new SoundFile(this, "Jump.wav");
+  levelUpSound = new SoundFile(this, "Levelup.wav");
+  hurtSound = new SoundFile(this, "Hurt.wav");
 
   //interface and com variables
   interfaceServer = new Server(this, 25001);
@@ -101,35 +125,54 @@ void draw() {
       c.show();
     }
 
-    //paint the dino
-    dino.update();
-    dino.show();
-
     //paint the pteros
+
     for (Pterodactylus p : flyers) {
       p.update();
       p.show();
-
-      if (p.pos.x - p.size.x/2 < dino.pos.x + dino.size.x/2 &&
-        p.pos.x + p.size.x/2 > dino.pos.x - dino.size.x/2 &&
-        p.pos.y - p.size.y/2 < dino.pos.y + dino.size.y/2 &&
-        p.pos.y + p.size.y/2 > dino.pos.y - dino.size.y/2) {
-        isGameOver = true;
+      for (Dino dino : dinos) {
+        if (p.pos.x - p.size.x/2 < dino.pos.x + dino.size.x/2 &&
+          p.pos.x + p.size.x/2 > dino.pos.x - dino.size.x/2 &&
+          p.pos.y - p.size.y/2 < dino.pos.y + dino.size.y/2 &&
+          p.pos.y + p.size.y/2 > dino.pos.y - dino.size.y/2) {
+          dino.die();
+        }
       }
     }
-
     //paint the cactues and check for collision
     for (Cactus c : cactuses) {
       c.update();
       c.show();
-      //check for collisions
-      if (c.pos.x - c.size.x/2 < dino.pos.x + dino.size.x/2 &&
-        c.pos.x + c.size.x/2 > dino.pos.x - dino.size.x/2 &&
-        c.pos.y -c.size.y/2 < dino.pos.y + dino.size.y/2) {
-        isGameOver = true;
+      for (Dino dino : dinos) {
+        //check for collisions
+        if (c.pos.x - c.size.x/2 < dino.pos.x + dino.size.x/2 &&
+          c.pos.x + c.size.x/2 > dino.pos.x - dino.size.x/2 &&
+          c.pos.y -c.size.y/2 < dino.pos.y + dino.size.y/2) {
+          dino.die();
+        }
       }
     }
 
+    //paint the dinos
+    for (Dino dino : dinos) {
+      //only update the dinos alive
+      if (dino.alive) {
+        dino.update();
+        dino.show();
+        dino.score = score;
+      }
+    }
+
+    //check if all dinos are dead - then gameOver
+    isGameOver = true;
+    for (Dino dino : dinos) {
+      if (dino.alive == true) {
+        isGameOver = false;
+        break;
+      } else {
+        isGameOver = true;
+      }
+    }
     //check if insert a new obstactle
     if (obstacleTimer <= 0) {
       if (level < 3) {
@@ -204,6 +247,7 @@ void draw() {
     {
       level++;
       frameRate(30 + level);
+      levelUpSound.play();
     }
   }//if (!isGameOver)
   //display the score
@@ -216,8 +260,6 @@ void draw() {
     text(score, width - 50, 10);
     fill(80);
     text(highScore, width - 100, 10);
-
-    fill(80);
     text("lvl:" + level, width - 150, 10);
 
     popMatrix();
@@ -236,7 +278,7 @@ void draw() {
     Pterodactylus tempPtero = new Pterodactylus();
     Cactus tempCactus = new Cactus(width);
     for (Pterodactylus f : flyers) {
-      float distance = f.pos.x -  f.size.x/2 - dino.pos.x + dino.size.x/2;
+      float distance = f.pos.x -  f.size.x/2 - dinos.get(0).pos.x + dinos.get(0).size.x/2;
       if (distance > 0)
       {
         distFlyer = distance;
@@ -245,13 +287,13 @@ void draw() {
       }
     }
     for (Cactus c : cactuses) {
-      float distance = (c.pos.x -  c.size.x/2) - (dino.pos.x + dino.size.x/2);
+      float distance = (c.pos.x -  c.size.x/2) - (dinos.get(0).pos.x + dinos.get(0).size.x/2);
       if (distance > 0)
       {
         //just a line to visualize the distance
         if (showDebugInfo) {
           stroke(10);
-          line(dino.pos.x + dino.size.x/2, 10, c.pos.x -  c.size.x/2, 10);
+          line(dinos.get(0).pos.x + dinos.get(0).size.x/2, 10, c.pos.x -  c.size.x/2, 10);
         }
         distCactus = distance;
         tempCactus = c;
@@ -267,35 +309,64 @@ void draw() {
     }
   }
 
+  if (showDebugInfo) {
+    fill(80);
+    textFont(pixelFont);
+    textSize(20);
+    textAlign(LEFT, TOP);
+    text(Version, 10, 10);
+  }
   //write to the network
-  gameData.setInt("score", score);
   gameData.setString("status", "running");
   gameData.setInt("level", level);
   gameData.setFloat("distance_obstacle", distanceObstacle);
   gameData.setFloat("height_obstacle", heightObstacle);
   gameData.setBoolean("gameover", isGameOver);
-  gameData.setFloat("player_height", dino.pos.y);
+  for (int i=0; i<dinos.size(); i++) {
+    JSONObject dinoField = new JSONObject();
+    dinoField.setFloat("player_height", dinos.get(i).pos.y);
+    dinoField.setInt("score", dinos.get(i).score);
+    dinoData.setJSONObject(i, dinoField);
+  }
+
+
+
+  gameData.setInt("instances", dinoInstances);
   interfaceServer.write(gameData.toString());
   Client thisClient = interfaceServer.available();
   // If the client is not null, and says something, display what it said
   if (thisClient !=null) {
     String clientMsg = thisClient.readString();
     if (clientMsg != null) {
+      // a bit problematic since any field that is not send will cause an exception, thus the client needs to send all
       JSONObject msg = parseJSONObject(clientMsg);
+      int dinoNo = msg.getInt("dino_instance");
+      println("Addressing dino:", dinoNo);
       if (msg.getString("command").equals("restart")) {
-        restart(); //<>//
+        restart();
       }
+      if (msg.getInt("num_instances") != dinoInstances) {
+        dinoInstances = msg.getInt("num_instances");
+        constrain(dinoInstances, 1, maxDinoInstances);
+        println("Changed dino instance number to:", dinoInstances);
+        dinoInstances = msg.getInt("num_instances");
+        restart();
+      }
+
+      int addressedDino = msg.getInt("dino_instance");
+      addressedDino = constrain(addressedDino, 0, dinoInstances);
+
       if (msg.getString("action").equals("duck")) {
-        dino.isDucking = true;
+        dinos.get(addressedDino).isDucking = true;
       }
       if (msg.getString("action").equals("bigjump")) {
-        dino.jump();
-        dino.setLowGrav();
+        dinos.get(addressedDino).jump();
+        dinos.get(addressedDino).setLowGrav();
         println("Jump");
       }
       if (msg.getString("action").equals("smalljump")) {
-        dino.jump();
-        dino.setNormalGrav();
+        dinos.get(addressedDino).jump();
+        dinos.get(addressedDino).setNormalGrav();
       }
     }
   }
@@ -309,6 +380,7 @@ void restart() {
   soil.clear();
   cactuses.clear();
   flyers.clear();
+  dinos.clear();
   if (score > highScore) {
     highScore = score;
   }
@@ -316,10 +388,11 @@ void restart() {
 }
 
 void keyPressed() {
+  //the keyboard always controls the first dino with the 0 zero
   switch (key) {
   case ' ':
-    dino.jump();
-    dino.setLowGrav();
+    dinos.get(0).jump();
+    dinos.get(0).setLowGrav();
     break;
   case 'r':
     restart();
@@ -334,7 +407,7 @@ void keyPressed() {
 
   switch (keyCode) {
   case DOWN:
-    dino.isDucking = true;
+    dinos.get(0).isDucking = true;
     break;
   }
 }
@@ -342,15 +415,15 @@ void keyPressed() {
 void keyReleased() {
   switch (key) {
   case ' ':
-    if (dino.jumpTimer < 15) {
-      dino.setNormalGrav();
+    if (dinos.get(0).jumpTimer < 15) {
+      dinos.get(0).setNormalGrav();
     }
     break;
   }
 
   switch (keyCode) {
   case DOWN:
-    dino.isDucking = false;
+    dinos.get(0).isDucking = false;
     break;
   }
 }

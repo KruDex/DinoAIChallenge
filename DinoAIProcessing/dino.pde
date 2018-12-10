@@ -15,6 +15,8 @@ class Dino {
   PImage []sprites;
   PImage dinoFrame;
   boolean isDucking = false;
+  boolean alive = true;
+  int score = 0;
 
 
   Dino() {
@@ -36,6 +38,7 @@ class Dino {
     if (pos.y == initialY)
     {
       forceY = -22;//force;
+      jumpSound.play();
     }
   }
 
@@ -45,6 +48,13 @@ class Dino {
 
   void setNormalGrav() {
     gravity = 3.0;
+  }
+
+  void die() {
+    if (alive) {
+      hurtSound.play();
+      alive = false;
+    }
   }
 
   void update() {

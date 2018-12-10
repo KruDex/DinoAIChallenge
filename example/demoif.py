@@ -15,14 +15,15 @@ def main():
         msg = {
             "command" : " ",
             "action" : " ",
-            "dino_instance" : 0
+            "dino_instance" : 0,
+            "num_instances" : 1
         }
        
-        if data["gameover"] == True:
-            msg["command"] = "restart"
-            s.send(bytes(json.dumps(msg), "utf-8"))
+        # if data["gameover"] == True:
+        #     msg["command"] = "restart"
+        #     s.send(bytes(json.dumps(msg), "utf-8"))
 
-        msg["action"] = "smalljump"  
+        # msg["action"] = "smalljump"  
         s.send(bytes(json.dumps(msg), "utf-8"))
 
 if __name__ == "__main__":
