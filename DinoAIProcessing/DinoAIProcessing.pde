@@ -1,9 +1,8 @@
-import processing.net.*; //<>// //<>// //<>//
+import hypermedia.net.*; //<>//
 import processing.sound.*;
 // in case the sim takes many dinos
 int dinoInstances = 1;
 int maxDinoInstances = 20;
-
 
 ArrayList<Dino> dinos = new ArrayList<Dino>();
 ArrayList<Cactus> cactuses = new ArrayList<Cactus>();
@@ -42,7 +41,12 @@ SoundFile hurtSound;
 PFont pixelFont;
 
 //for the network
-Server interfaceServer;
+UDP udpConn;
+String partnerIP = "";
+int   partnerPort = -1;
+boolean connectionEstablished = false;
+
+//data exchange JSONs
 JSONObject gameData;
 JSONArray dinoData;
 
@@ -98,11 +102,55 @@ void setup () {
   hurtSound = new SoundFile(this, "Hurt.wav");
 
   //interface and com variables
-  interfaceServer = new Server(this, 25001);
+  udpConn = new UDP(this, 25001);
+  udpConn.listen(true);
   gameData = new JSONObject();
   hideScore = false;
   highScore = 0;
   init();
+}
+
+void receive( byte[] data, String ip, int port ) {
+  partnerIP = ip;
+  partnerPort = port;
+  connectionEstablished = true;
+  String message = new String( data );
+  //interpreting the message
+  // a bit problematic since any field that is not send will cause an exception, thus the client needs to send all
+  JSONObject msg = parseJSONObject(message);
+  JSONArray dinoMsgs = msg.getJSONArray("dinos");
+  try { //<>//
+    for (int i=0; i<dinoMsgs.size(); i++) {
+      JSONObject dinoCmd = dinoMsgs.getJSONObject(i);
+      int addressedDino = dinoCmd.getInt("dino_instance"); //<>//
+      addressedDino = constrain(addressedDino, 0, dinoInstances-1);
+
+      if (dinoCmd.getString("action").equals("duck")) {
+        dinos.get(addressedDino).isDucking = true;
+      } else if (dinoCmd.getString("action").equals("bigjump")) {
+        dinos.get(addressedDino).jump();
+        dinos.get(addressedDino).setLowGrav();
+      } else if (dinoCmd.getString("action").equals("smalljump")) {
+        dinos.get(addressedDino).jump();
+        dinos.get(addressedDino).setNormalGrav();
+      }
+    }
+  }
+  catch (Exception e) {
+    println("Error reading JSON array for the dinos");
+  }
+
+  if (msg.getString("command").equals("restart")) {
+    restart();
+  }
+
+  if (msg.getInt("num_instances") != dinoInstances) {
+    dinoInstances = msg.getInt("num_instances");
+    constrain(dinoInstances, 1, maxDinoInstances);
+    println("Changed dino instance number to:", dinoInstances);
+    dinoInstances = msg.getInt("num_instances");
+    restart();
+  }
 }
 
 void draw() {
@@ -324,6 +372,7 @@ void draw() {
   gameData.setBoolean("gameover", isGameOver);
   for (int i=0; i<dinos.size(); i++) {
     JSONObject dinoField = new JSONObject();
+    dinoField.setInt("id", i);
     dinoField.setFloat("player_height", dinos.get(i).pos.y);
     dinoField.setInt("score", dinos.get(i).score);
     dinoData.setJSONObject(i, dinoField);
@@ -331,51 +380,55 @@ void draw() {
   gameData.setJSONArray("dinos", dinoData);
 
   gameData.setInt("instances", dinoInstances);
-  interfaceServer.write(gameData.toString());
-  Client thisClient = interfaceServer.available();
-  // If the client is not null, and says something, display what it said
-  if (thisClient !=null) {
-    String clientMsg = thisClient.readString();
-    if (clientMsg != null) {
-      // a bit problematic since any field that is not send will cause an exception, thus the client needs to send all
-      JSONObject msg = parseJSONObject(clientMsg);
-      JSONArray dinoMsgs = msg.getJSONArray("dinos");
-
-      try {
-        for (int i=0; i<dinoMsgs.size(); i++) {
-          println(dinoMsgs.get(i));
-          int addressedDino = msg.getInt("dino_instance");
-          addressedDino = constrain(addressedDino, 0, dinoInstances);
-
-          if (msg.getString("action").equals("duck")) {
-            dinos.get(addressedDino).isDucking = true;
-          } else if (msg.getString("action").equals("bigjump")) {
-            dinos.get(addressedDino).jump();
-            dinos.get(addressedDino).setLowGrav();
-            println("Jump");
-          } else if (msg.getString("action").equals("smalljump")) {
-            dinos.get(addressedDino).jump();
-            dinos.get(addressedDino).setNormalGrav();
-          }
-        }
-      }
-      catch (Exception e) {
-        println("Error reading JSON array for the dinos");
-      }
-
-      if (msg.getString("command").equals("restart")) {
-        restart();
-      }
-
-      if (msg.getInt("num_instances") != dinoInstances) {
-        dinoInstances = msg.getInt("num_instances");
-        constrain(dinoInstances, 1, maxDinoInstances);
-        println("Changed dino instance number to:", dinoInstances);
-        dinoInstances = msg.getInt("num_instances");
-        restart();
-      }
-    }
+  if (connectionEstablished) {
+    udpConn.send(gameData.toString(), partnerIP, partnerPort );
   }
+  //interfaceServer.write(gameData.toString());
+  /*
+  Client thisClient = interfaceServer.available();
+   // If the client is not null, and says something, display what it said
+   if (thisClient !=null) {
+   String clientMsg = thisClient.readString();
+   if (clientMsg != null) {
+   // a bit problematic since any field that is not send will cause an exception, thus the client needs to send all
+   JSONObject msg = parseJSONObject(clientMsg);
+   JSONArray dinoMsgs = msg.getJSONArray("dinos");
+   
+   try {
+   for (int i=0; i<dinoMsgs.size(); i++) {
+   println(dinoMsgs.get(i));
+   int addressedDino = msg.getInt("dino_instance");
+   addressedDino = constrain(addressedDino, 0, dinoInstances);
+   
+   if (msg.getString("action").equals("duck")) {
+   dinos.get(addressedDino).isDucking = true;
+   } else if (msg.getString("action").equals("bigjump")) {
+   dinos.get(addressedDino).jump();
+   dinos.get(addressedDino).setLowGrav();
+   println("Jump");
+   } else if (msg.getString("action").equals("smalljump")) {
+   dinos.get(addressedDino).jump();
+   dinos.get(addressedDino).setNormalGrav();
+   }
+   }
+   }
+   catch (Exception e) {
+   println("Error reading JSON array for the dinos");
+   }
+   
+   if (msg.getString("command").equals("restart")) {
+   restart();
+   }
+   
+   if (msg.getInt("num_instances") != dinoInstances) {
+   dinoInstances = msg.getInt("num_instances");
+   constrain(dinoInstances, 1, maxDinoInstances);
+   println("Changed dino instance number to:", dinoInstances);
+   dinoInstances = msg.getInt("num_instances");
+   restart();
+   }
+   }
+   }*/
   if (isGameOver)
   {
     gameOver();
