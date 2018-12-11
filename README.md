@@ -2,7 +2,7 @@
 
 This is an AI challenge based on a clone of the game when the Chromium Browser detects that you are offline... An inspriation is [here](https://chromedino.com)
 
-The game is similar but exposes an interface to the in game data via a TCP connection with JSON messages
+The game is similar but exposes an interface to the in game data via a TCP connection (will be changed to UDP) with JSON messages
 
 ## The Idea and other inspirations
 
@@ -54,8 +54,7 @@ Via the same connection data can be sent to the game
 ```json
 {
     "command" : " ",
-    "action" : " ",
-    "dino_instance" : 0
+    "dinos" : [{"action" : " ", "dino_instance" : 0}]
 }
 ```
 
@@ -64,3 +63,11 @@ Via the same connection data can be sent to the game
 ## Interface Example
 
 In the [example](./example) is a python program to use the socket to communicate with the game
+
+## TODO
+
+This is under development and a few more things to do before it can be used
+
+- changing TCP to UDP
+- updating the example
+- documentation on the JSON messages 
