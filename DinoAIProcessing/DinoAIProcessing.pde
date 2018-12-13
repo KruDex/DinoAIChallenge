@@ -1,4 +1,4 @@
-import hypermedia.net.*; //<>//
+import hypermedia.net.*; //<>// //<>// //<>//
 import processing.sound.*;
 // in case the sim takes many dinos
 int dinoInstances = 1;
@@ -117,39 +117,43 @@ void receive( byte[] data, String ip, int port ) {
   String message = new String( data );
   //interpreting the message
   // a bit problematic since any field that is not send will cause an exception, thus the client needs to send all
-  JSONObject msg = parseJSONObject(message);
-  JSONArray dinoMsgs = msg.getJSONArray("dinos");
-  try { //<>//
-    for (int i=0; i<dinoMsgs.size(); i++) {
-      JSONObject dinoCmd = dinoMsgs.getJSONObject(i);
-      int addressedDino = dinoCmd.getInt("dino_instance"); //<>//
-      addressedDino = constrain(addressedDino, 0, dinoInstances-1);
+  try {
+    JSONObject msg = parseJSONObject(message);
+    JSONArray dinoMsgs = msg.getJSONArray("dinos");
+    try {
+      for (int i=0; i<dinoMsgs.size(); i++) {
+        JSONObject dinoCmd = dinoMsgs.getJSONObject(i);
+        int addressedDino = dinoCmd.getInt("dino_instance");
+        addressedDino = constrain(addressedDino, 0, dinoInstances-1);
 
-      if (dinoCmd.getString("action").equals("duck")) {
-        dinos.get(addressedDino).isDucking = true;
-      } else if (dinoCmd.getString("action").equals("bigjump")) {
-        dinos.get(addressedDino).jump();
-        dinos.get(addressedDino).setLowGrav();
-      } else if (dinoCmd.getString("action").equals("smalljump")) {
-        dinos.get(addressedDino).jump();
-        dinos.get(addressedDino).setNormalGrav();
+        if (dinoCmd.getString("action").equals("duck")) {
+          dinos.get(addressedDino).isDucking = true;
+        } else if (dinoCmd.getString("action").equals("bigjump")) {
+          dinos.get(addressedDino).jump();
+          dinos.get(addressedDino).setLowGrav();
+        } else if (dinoCmd.getString("action").equals("smalljump")) {
+          dinos.get(addressedDino).jump();
+          dinos.get(addressedDino).setNormalGrav();
+        }
       }
+    }
+    catch (Exception e) {
+      println("Error reading JSON array for the dinos");
+    }
+    if (msg.getString("command").equals("restart")) {
+      restart();
+    }
+
+    if (msg.getInt("num_instances") != dinoInstances) {
+      dinoInstances = msg.getInt("num_instances");
+      constrain(dinoInstances, 1, maxDinoInstances);
+      println("Changed dino instance number to:", dinoInstances);
+      dinoInstances = msg.getInt("num_instances");
+      restart();
     }
   }
   catch (Exception e) {
-    println("Error reading JSON array for the dinos");
-  }
-
-  if (msg.getString("command").equals("restart")) {
-    restart();
-  }
-
-  if (msg.getInt("num_instances") != dinoInstances) {
-    dinoInstances = msg.getInt("num_instances");
-    constrain(dinoInstances, 1, maxDinoInstances);
-    println("Changed dino instance number to:", dinoInstances);
-    dinoInstances = msg.getInt("num_instances");
-    restart();
+    println("Error reading JSON from network");
   }
 }
 
@@ -365,7 +369,6 @@ void draw() {
     text(Version, 10, 10);
   }
   //write to the network
-  gameData.setString("status", "running");
   gameData.setInt("level", level);
   gameData.setFloat("distance_obstacle", distanceObstacle);
   gameData.setFloat("height_obstacle", heightObstacle);
@@ -375,6 +378,7 @@ void draw() {
     dinoField.setInt("id", i);
     dinoField.setFloat("player_height", dinos.get(i).pos.y);
     dinoField.setInt("score", dinos.get(i).score);
+    dinoField.setBoolean("alive", dinos.get(i).alive);
     dinoData.setJSONObject(i, dinoField);
   }
   gameData.setJSONArray("dinos", dinoData);
