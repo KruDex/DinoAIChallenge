@@ -26,7 +26,7 @@ The clone of the game is written in Processing and is in the Folder [DinoAIProce
 | i          | toggle score display |
 | d          | toggle debug view    |
 
-It can be loaded in processing or in the latestes release here *coming soon*
+It can be loaded in processing or in the latestes release [here](./releases/tag/v0.9)
 
 ### The UDP interface
 
