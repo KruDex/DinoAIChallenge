@@ -26,7 +26,7 @@ The clone of the game is written in Processing and is in the Folder [DinoAIProce
 | i          | toggle score display |
 | d          | toggle debug view    |
 
-It can be loaded in processing or in the latestes release [here](https://github.com/krobnsoft/DinoAIChallenge/releases/tag/v0.9)
+It can be loaded in processing or in the latestes release [here](https://github.com/kruegerrobotics/DinoAIChallenge/releases/tag/v0.9)
 
 ### The UDP interface
 
@@ -43,13 +43,19 @@ This message contains the two mandatory fields for the game to respond. The *com
     }
 ```
 
+The command can be left empty which will made the game continue normally. The number of instances describe how many controllable and dinos will be in the game simultaneously. Those dinos are totally independed from each other. The idea behind is to ease the training of heuristic or geneteic algorithms and to test the differet mutations at the same time. The message as displayed is essential and if the *num_instances* is changed the **game will restart**.
+
+| Command    | Action                           |
+| ---------- |--------------                    |
+| restart    | will issue the game to restart   |                 |
+
 #### Example data received
 
 Once the game is triggered by the initial message it will respond with this *telemetry*.
+**OLD info NEEDS TO BE UPDATED**
 
 ```json
 {   'level': 1,
-    'status': 'running',
     'height_obstacle': 0,
     'instances': 3,
     'distance_obstacle': 127,
@@ -57,7 +63,24 @@ Once the game is triggered by the initial message it will respond with this *tel
     'dinos': [{'id': 0, 'score': 13, 'player_height': 110}, {'id': 1, 'score': 13, 'player_height': 57.20000076293945}, {'id': 2, 'score': 13, 'player_height': 97}]}
 ```
 
-*Detailed explanatin will come soon*
+##### The fields in the JSON message
+
+| Field             | Meaning                                                   |
+| ----------        |--------------                                             |
+| level             | The current level                                         |
+| height_obstacle   | The height of the next obstacle                           |
+| instances         | The number of independent/simultaneous dinos in the game  |
+| distance_obstacle | The distance to the next obstacle                         |
+| dinos             | The array of all dino instances with specific information |
+
+###### The specific dino message
+
+| Field         | Meaning                                                   |
+| ----------    |--------------                                             |
+| id            | The id of the dino instance                               |
+| score         | The score of this dino (will remain constant if dino dies)|
+| player_height | The heigth of the dino (important when jumping)           |
+| alive         | True if the dino is still alive                           |
 
 #### Sending Data
 
@@ -80,6 +103,4 @@ In the [example](./example) is a python program to use the socket to communicate
 
 This is under development and a few more things to do before it can be used
 
-- changing TCP to UDP
-- updating the example
-- documentation on the JSON messages 
+- improve the documentation on the JSON messages
