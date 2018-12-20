@@ -38,7 +38,7 @@ This message contains the two mandatory fields for the game to respond. The *com
 
 ```json
     msg = {
-        "command" : "",
+        "command" : " ",
         "num_instances" : 3
     }
 ```
@@ -55,12 +55,12 @@ Once the game is triggered by the initial message it will respond with this *tel
 **OLD info NEEDS TO BE UPDATED**
 
 ```json
-{   'level': 1,
-    'height_obstacle': 0,
-    'instances': 3,
-    'distance_obstacle': 127,
-    'gameover': False,
-    'dinos': [{'id': 0, 'score': 13, 'player_height': 110}, {'id': 1, 'score': 13, 'player_height': 57.20000076293945}, {'id': 2, 'score': 13, 'player_height': 97}]}
+{   "level" : 1,
+    "height_obstacle" : 0,
+    "instances" : 3,
+    "distance_obstacle" : 127,
+    "gameover": False,
+    "dinos" : [{"id": 0, "score": 13, "player_height": 110}, {"id": 1, "score": 13, "player_height": 57.20000076293945}, {"id": 2, "score": 13, "player_height": 97}]}
 ```
 
 ##### The fields in the JSON message
