@@ -32,27 +32,13 @@ It can be loaded in processing or in the latestes release [here](https://github.
 
 The game listens for a udp message in a certain format on port 25001. Once a connection is made the game will respond on this connection and send its data with each frame. A python example is in this repository
 
-#### Format of the inital trigger message
+#### Inital trigger message
 
-This message contains the two mandatory fields for the game to respond. The *command* can be left empty and the *num_instances* determine how many dinos will be in the game simultaneously (max. 20).
+To trigger the program to send out UDP message it needs to be triggered. This can be done by sending anything to port **25001** on the machine where the dino game is running
 
-```json
-    msg = {
-        "command" : " ",
-        "num_instances" : 3
-    }
-```
-
-The command can be left empty which will made the game continue normally. The number of instances describe how many controllable and dinos will be in the game simultaneously. Those dinos are totally independed from each other. The idea behind is to ease the training of heuristic or geneteic algorithms and to test the differet mutations at the same time. The message as displayed is essential and if the *num_instances* is changed the **game will restart**.
-
-| Command    | Action                           |
-| ---------- |--------------                    |
-| restart    | will issue the game to restart   |                 |
-
-#### Example data received
+#### Message format for receving data from the game
 
 Once the game is triggered by the initial message it will respond with this *telemetry*.
-**OLD info NEEDS TO BE UPDATED**
 
 ```json
 {   "level" : 1,
@@ -65,13 +51,13 @@ Once the game is triggered by the initial message it will respond with this *tel
 
 ##### The fields in the JSON message
 
-| Field             | Meaning                                                   |
-| ----------        |--------------                                             |
-| level             | The current level                                         |
-| height_obstacle   | The height of the next obstacle                           |
-| instances         | The number of independent/simultaneous dinos in the game  |
-| distance_obstacle | The distance to the next obstacle                         |
-| dinos             | The array of all dino instances with specific information |
+| Field             | Meaning                                                                       |
+| ----------        |--------------                                                                 |
+| level             | The current level                                                             |
+| height_obstacle   | The height of the next obstacle (the graphics y-coodinate 0 top - 150 high)   |
+| instances         | The number of independent/simultaneous dinos in the game                      |
+| distance_obstacle | The distance to the next obstacle                                             |
+| dinos             | The array of all dino instances with specific information                     |
 
 ###### The specific dino message
 
@@ -82,25 +68,49 @@ Once the game is triggered by the initial message it will respond with this *tel
 | player_height | The heigth of the dino (important when jumping)           |
 | alive         | True if the dino is still alive                           |
 
-#### Sending Data
+#### Message format for sending to the game
 
-Via the same connection data can be sent to the game
+A valid message sent to the game contains two mandatory fields: *command* and *num_instances* command The *command* can be left empty and the *num_instances* determine how many dinos will be in the game simultaneously (max. 20).
+
+```json
+    msg = {
+        "command" : " ",
+        "num_instances" : 3
+    }
+```
+
+If the command is left empty the game will continue normally. The *num_instances* describes how many controllable dinos will be in the game simultaneously. Those dinos are totally independed from each other. The idea behind is to ease the training of heuristic or genetic algorithms and to test the differet mutations at the same time. The message as displayed is essential and if the *num_instances* is changed the **game will restart**.
+
+| Command    | Description                      |
+| ---------- |--------------                    |
+| restart    | will issue the game to restart   |                 |
+
+##### Commanding the dino
+
+To command the instance of the dino the message has to contain an array called *dinos* with an objecy containing the fields *action* and *dino_instance*. The *dino_instances* addresses the dino and the *action* can be one of the following:
+
+| Action    | Description                      |
+| ----------|--------------                    |
+| smalljump | the dino will do a small jump    |  
+| bigjump   | the dino will do a big jump      |  
+| duck      | the dino will duck               |  
+
+##### Example for a big jump
 
 ```json
 {
     "command" : " ",
-    "dinos" : [{"action" : " ", "dino_instance" : 0}]
+    "num_instances" : 3
+    "dinos" : [{"action" : "bigjump", "dino_instance" : 0}]
 }
 ```
 
-*Detailed explanatin will come soon*
-
 ## Interface Example
 
-In the [example](./example) is a python program to use the socket to communicate with the game
+In the [example](./example) is a python program to use the socket to communicate with the game and 
 
 ## TODO
 
-This is under development and a few more things to do before it can be used
-
-- improve the documentation on the JSON messages
+- Scale of the obstacles
+- Tuning of the obstacle distance so that the smalljump is required
+- messages the distance between the obstacles
