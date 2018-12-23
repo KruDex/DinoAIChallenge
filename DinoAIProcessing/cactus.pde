@@ -2,10 +2,12 @@ class Cactus
 {
   PVector pos;
   PVector size;
+  int num;
 
   Cactus(int xpos) {
     pos = new PVector(xpos, 100);
     size = new PVector(34, 44);
+    num = int(random(1,3));
   }
 
   void update() {
